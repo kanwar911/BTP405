@@ -10,22 +10,20 @@ from datetime import datetime
 class Reading:
     def __init__(self):
         self.timestamp = datetime.now()
-        self.value = random.uniform(0, 100)  # Random float value
+        self.value = random.uniform(0, 100)
     
     def __repr__(self):
         return f"Reading({self.timestamp}, {self.value:.2f})"
 
-# Shared resource
 BUFFER = []
 BUFFER_SIZE = 100
 lock = threading.Lock()
 condition = threading.Condition(lock)
 
-# Producer class
 class Producer(threading.Thread):
     def run(self):
         global BUFFER
-        for _ in range(2000 // 7):  # Distribute workload across producers
+        for _ in range(2000 // 7): 
             reading = Reading()
             with condition:
                 while len(BUFFER) >= BUFFER_SIZE:
@@ -33,7 +31,6 @@ class Producer(threading.Thread):
                 BUFFER.append(reading)
                 condition.notify_all()
 
-# Consumer class
 class Consumer(threading.Thread):
     def __init__(self, consumer_id):
         super().__init__()
@@ -41,7 +38,7 @@ class Consumer(threading.Thread):
 
     def run(self):
         global BUFFER
-        timeout = 60  # 1-minute timeout
+        timeout = 60 
         start_time = time.time()
         with open(f"consumer_{self.consumer_id}.pkl", "wb") as file:
             while True:
@@ -49,23 +46,20 @@ class Consumer(threading.Thread):
                     while not BUFFER:
                         condition.wait(timeout=timeout)
                         if time.time() - start_time >= timeout:
-                            return  # Stop if waiting too long
+                            return  
                     reading = BUFFER.pop(0)
                     condition.notify_all()
                 pickle.dump(reading, file)
-                start_time = time.time()  # Reset timeout counter
+                start_time = time.time()  
 
-# Create Producer and Consumer threads
 producers = [Producer() for _ in range(7)]
 consumers = [Consumer(i) for i in range(3)]
 
-# Start threads
 for p in producers:
     p.start()
 for c in consumers:
     c.start()
 
-# Wait for all threads to finish
 for p in producers:
     p.join()
 for c in consumers:
